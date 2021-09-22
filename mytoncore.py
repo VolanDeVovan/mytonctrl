@@ -2891,7 +2891,7 @@ class GpuThread(Thread):
 			local.AddLog(powAddr, "debug")
 			filePath = self.ton.tempDir + "mined.boc"
 			params = self.ton.GetPowParams(powAddr)
-			args = ["-vv", "-g " + self.gpuId, "-t", miningTime, minerAddr, params["seed"], params["complexity"], params["iterations"], powAddr, filePath]
+			args = ["-vv", "-g " + str(self.gpuId), "-t", miningTime, minerAddr, params["seed"], params["complexity"], params["iterations"], powAddr, filePath]
 			result = self.ton.miner.Run(args)
 			if "Saving" in result:
 				newParams = self.ton.GetPowParams(powAddr)
