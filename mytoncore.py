@@ -9,8 +9,7 @@ import re
 import time
 import math
 from mypylib.mypylib import *
-
-GPU_NUM = 8
+from threading import Thread
 
 local = MyPyClass(__file__)
 
@@ -2853,46 +2852,63 @@ def Telemetry(ton):
 	resp = requests.post(url, data=output, timeout=3)
 #end define
 
-def Mining(ton):
-	powAddr = local.db.get("powAddr")
-	minerAddr = local.db.get("minerAddr")
-	miningTime = local.db.get("miningTime", 100)
-	if powAddr == 'auto':
-		givers = ["kf-kkdY_B7p-77TLn2hUhM6QidWrrsl8FYWCIvBMpZKprBtN", "kf8SYc83pm5JkGt0p3TQRkuiM58O9Cr3waUtR9OoFq716lN-", "kf-FV4QTxLl-7Ct3E6MqOtMt-RGXMxi27g4I645lw6MTWraV", "kf_NSzfDJI1A3rOM0GQm7xsoUXHTgmdhN5-OrGD8uwL2JMvQ", "kf8gf1PQy4u2kURl-Gz4LbS29eaN4sVdrVQkPO-JL80VhOe6", "kf8kO6K6Qh6YM4ddjRYYlvVAK7IgyW8Zet-4ZvNrVsmQ4EOF", "kf-P_TOdwcCh0AXHhBpICDMxStxHenWdLCDLNH5QcNpwMHJ8", "kf91o4NNTryJ-Cw3sDGt9OTiafmETdVFUMvylQdFPoOxIsLm", "kf9iWhwk9GwAXjtwKG-vN7rmXT3hLIT23RBY6KhVaynRrIK7", "kf8JfFUEJhhpRW80_jqD7zzQteH6EBHOzxiOhygRhBdt4z2N"]
-		giver = 0
-		params = 0
-		bestPow = givers[0]
-		bestComplexity = 0
-		for giver in givers:
-			params = ton.GetPowParams(giver)
-			if bestComplexity == 0:
-				bestComplexity = params["complexity"]
-				bestPow = giver
-			#end if
-			if params["complexity"] > bestComplexity:
-				bestPow = giver
-				bestComplexity = params["complexity"]
-			#end if
-		local.db["pow"] = bestPow
-		powAddr = bestPow
-	#end if
-	if powAddr is None or minerAddr is None:
-		return
-	#end if
+class GpuThread(Thread):
 
-	local.AddLog("start Mining function", "debug")
-	local.AddLog(powAddr, "debug")
-	filePath = ton.tempDir + "mined.boc"
-	params = ton.GetPowParams(powAddr)
-	for gpuId in range(GPU_NUM):
-		args = ["-vv", "-g 0", "-t", miningTime, minerAddr, params["seed"], params["complexity"], params["iterations"], powAddr, filePath]
-		result = ton.miner.Run(args)
+	def __init__ (self, ton, gpuId):
+		self.ton = ton
+		self.gpuId = gpuId
+		Thread.__init__(self)
+
+	def run(self):
+		powAddr = local.db.get("powAddr")
+		minerAddr = local.db.get("minerAddr")
+		miningTime = local.db.get("miningTime", 100)
+		if powAddr == 'auto':
+			givers = ["kf-kkdY_B7p-77TLn2hUhM6QidWrrsl8FYWCIvBMpZKprBtN", "kf8SYc83pm5JkGt0p3TQRkuiM58O9Cr3waUtR9OoFq716lN-", "kf-FV4QTxLl-7Ct3E6MqOtMt-RGXMxi27g4I645lw6MTWraV", "kf_NSzfDJI1A3rOM0GQm7xsoUXHTgmdhN5-OrGD8uwL2JMvQ", "kf8gf1PQy4u2kURl-Gz4LbS29eaN4sVdrVQkPO-JL80VhOe6", "kf8kO6K6Qh6YM4ddjRYYlvVAK7IgyW8Zet-4ZvNrVsmQ4EOF", "kf-P_TOdwcCh0AXHhBpICDMxStxHenWdLCDLNH5QcNpwMHJ8", "kf91o4NNTryJ-Cw3sDGt9OTiafmETdVFUMvylQdFPoOxIsLm", "kf9iWhwk9GwAXjtwKG-vN7rmXT3hLIT23RBY6KhVaynRrIK7", "kf8JfFUEJhhpRW80_jqD7zzQteH6EBHOzxiOhygRhBdt4z2N"]
+			giver = 0
+			params = 0
+			bestPow = givers[0]
+			bestComplexity = 0
+			for giver in givers:
+				params = self.ton.GetPowParams(giver)
+				if bestComplexity == 0:
+					bestComplexity = params["complexity"]
+					bestPow = giver
+				#end if
+				if params["complexity"] > bestComplexity:
+					bestPow = giver
+					bestComplexity = params["complexity"]
+				#end if
+			local.db["pow"] = bestPow
+			powAddr = bestPow
+		#end if
+		if powAddr is None or minerAddr is None:
+			return
+		#end if
+
+		local.AddLog("start Mining function", "debug")
+		local.AddLog(powAddr, "debug")
+		filePath = self.ton.tempDir + "mined.boc"
+		params = self.ton.GetPowParams(powAddr)
+		args = ["-vv", "-g " + self.gpuId, "-t", miningTime, minerAddr, params["seed"], params["complexity"], params["iterations"], powAddr, filePath]
+		result = self.ton.miner.Run(args)
 		if "Saving" in result:
-			newParams = ton.GetPowParams(powAddr)
+			newParams = self.ton.GetPowParams(powAddr)
 			if params["seed"] == newParams["seed"] and params["complexity"] == newParams["complexity"]:
-				ton.liteClient.Run("sendfile " + filePath)
+				self.ton.liteClient.Run("sendfile " + filePath)
 				local.AddLog("Yep!")
-	#end if
+		#end if
+
+def Mining(ton):
+	gpuThreads = []
+
+    for gpuId in range(8):
+		gpuThread = GpuThread(ton, gpuId)
+		gpuThread.start()
+		gpuThreads.append(gpuThread)
+
+	for gpuThread in gpuThreads:
+		gpuThread.join()
 #end define
 
 def ScanBlocks(ton):
