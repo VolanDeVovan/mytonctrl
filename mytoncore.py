@@ -2860,44 +2860,45 @@ class GpuThread(Thread):
 		Thread.__init__(self)
 
 	def run(self):
-		powAddr = local.db.get("powAddr")
-		minerAddr = local.db.get("minerAddr")
-		miningTime = local.db.get("miningTime", 100)
-		if powAddr == 'auto':
-			givers = ["kf-kkdY_B7p-77TLn2hUhM6QidWrrsl8FYWCIvBMpZKprBtN", "kf8SYc83pm5JkGt0p3TQRkuiM58O9Cr3waUtR9OoFq716lN-", "kf-FV4QTxLl-7Ct3E6MqOtMt-RGXMxi27g4I645lw6MTWraV", "kf_NSzfDJI1A3rOM0GQm7xsoUXHTgmdhN5-OrGD8uwL2JMvQ", "kf8gf1PQy4u2kURl-Gz4LbS29eaN4sVdrVQkPO-JL80VhOe6", "kf8kO6K6Qh6YM4ddjRYYlvVAK7IgyW8Zet-4ZvNrVsmQ4EOF", "kf-P_TOdwcCh0AXHhBpICDMxStxHenWdLCDLNH5QcNpwMHJ8", "kf91o4NNTryJ-Cw3sDGt9OTiafmETdVFUMvylQdFPoOxIsLm", "kf9iWhwk9GwAXjtwKG-vN7rmXT3hLIT23RBY6KhVaynRrIK7", "kf8JfFUEJhhpRW80_jqD7zzQteH6EBHOzxiOhygRhBdt4z2N"]
-			giver = 0
-			params = 0
-			bestPow = givers[0]
-			bestComplexity = 0
-			for giver in givers:
-				params = self.ton.GetPowParams(giver)
-				if bestComplexity == 0:
-					bestComplexity = params["complexity"]
-					bestPow = giver
-				#end if
-				if params["complexity"] > bestComplexity:
-					bestPow = giver
-					bestComplexity = params["complexity"]
-				#end if
-			local.db["pow"] = bestPow
-			powAddr = bestPow
-		#end if
-		if powAddr is None or minerAddr is None:
-			return
-		#end if
+		while True:
+			powAddr = local.db.get("powAddr")
+			minerAddr = local.db.get("minerAddr")
+			miningTime = local.db.get("miningTime", 100)
+			if powAddr == 'auto':
+				givers = ["kf-kkdY_B7p-77TLn2hUhM6QidWrrsl8FYWCIvBMpZKprBtN", "kf8SYc83pm5JkGt0p3TQRkuiM58O9Cr3waUtR9OoFq716lN-", "kf-FV4QTxLl-7Ct3E6MqOtMt-RGXMxi27g4I645lw6MTWraV", "kf_NSzfDJI1A3rOM0GQm7xsoUXHTgmdhN5-OrGD8uwL2JMvQ", "kf8gf1PQy4u2kURl-Gz4LbS29eaN4sVdrVQkPO-JL80VhOe6", "kf8kO6K6Qh6YM4ddjRYYlvVAK7IgyW8Zet-4ZvNrVsmQ4EOF", "kf-P_TOdwcCh0AXHhBpICDMxStxHenWdLCDLNH5QcNpwMHJ8", "kf91o4NNTryJ-Cw3sDGt9OTiafmETdVFUMvylQdFPoOxIsLm", "kf9iWhwk9GwAXjtwKG-vN7rmXT3hLIT23RBY6KhVaynRrIK7", "kf8JfFUEJhhpRW80_jqD7zzQteH6EBHOzxiOhygRhBdt4z2N"]
+				giver = 0
+				params = 0
+				bestPow = givers[0]
+				bestComplexity = 0
+				for giver in givers:
+					params = self.ton.GetPowParams(giver)
+					if bestComplexity == 0:
+						bestComplexity = params["complexity"]
+						bestPow = giver
+					#end if
+					if params["complexity"] > bestComplexity:
+						bestPow = giver
+						bestComplexity = params["complexity"]
+					#end if
+				local.db["pow"] = bestPow
+				powAddr = bestPow
+			#end if
+			if powAddr is None or minerAddr is None:
+				return
+			#end if
 
-		local.AddLog("start Mining function", "debug")
-		local.AddLog(powAddr, "debug")
-		filePath = self.ton.tempDir + "mined.boc"
-		params = self.ton.GetPowParams(powAddr)
-		args = ["-vv", "-g " + self.gpuId, "-t", miningTime, minerAddr, params["seed"], params["complexity"], params["iterations"], powAddr, filePath]
-		result = self.ton.miner.Run(args)
-		if "Saving" in result:
-			newParams = self.ton.GetPowParams(powAddr)
-			if params["seed"] == newParams["seed"] and params["complexity"] == newParams["complexity"]:
-				self.ton.liteClient.Run("sendfile " + filePath)
-				local.AddLog("Yep!")
-		#end if
+			local.AddLog("start Mining function", "debug")
+			local.AddLog(powAddr, "debug")
+			filePath = self.ton.tempDir + "mined.boc"
+			params = self.ton.GetPowParams(powAddr)
+			args = ["-vv", "-g " + self.gpuId, "-t", miningTime, minerAddr, params["seed"], params["complexity"], params["iterations"], powAddr, filePath]
+			result = self.ton.miner.Run(args)
+			if "Saving" in result:
+				newParams = self.ton.GetPowParams(powAddr)
+				if params["seed"] == newParams["seed"] and params["complexity"] == newParams["complexity"]:
+					self.ton.liteClient.Run("sendfile " + filePath)
+					local.AddLog("Yep!")
+			#end if
 
 def Mining(ton):
 	gpuThreads = []
