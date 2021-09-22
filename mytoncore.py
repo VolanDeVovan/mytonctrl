@@ -10,6 +10,8 @@ import time
 import math
 from mypylib.mypylib import *
 
+GPU_NUM = 8
+
 local = MyPyClass(__file__)
 
 class LiteClient:
@@ -2882,13 +2884,14 @@ def Mining(ton):
 	local.AddLog(powAddr, "debug")
 	filePath = ton.tempDir + "mined.boc"
 	params = ton.GetPowParams(powAddr)
-	args = ["-vv", "-g 0", "-t", miningTime, minerAddr, params["seed"], params["complexity"], params["iterations"], powAddr, filePath]
-	result = ton.miner.Run(args)
-	if "Saving" in result:
-		newParams = ton.GetPowParams(powAddr)
-		if params["seed"] == newParams["seed"] and params["complexity"] == newParams["complexity"]:
-			ton.liteClient.Run("sendfile " + filePath)
-			local.AddLog("Yep!")
+	for gpuId in range(GPU_NUM):
+		args = ["-vv", "-g 0", "-t", miningTime, minerAddr, params["seed"], params["complexity"], params["iterations"], powAddr, filePath]
+		result = ton.miner.Run(args)
+		if "Saving" in result:
+			newParams = ton.GetPowParams(powAddr)
+			if params["seed"] == newParams["seed"] and params["complexity"] == newParams["complexity"]:
+				ton.liteClient.Run("sendfile " + filePath)
+				local.AddLog("Yep!")
 	#end if
 #end define
 
