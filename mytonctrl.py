@@ -889,6 +889,9 @@ def EnableMining(args):
 	powAddr = ton.GetSettings('powAddr')
 	minerAddr = ton.GetSettings('minerAddr')
 
+	ColorPrint('powAddr: %s' % powAddr)
+	ColorPrint('minerAddr %s' % minerAddr)
+
 	if powAddr is None:
 		ColorPrint("{yellow}powAddr is null. Set to auto select{endc}")
 		ton.SetSettings('powAddr', '"auto"')
