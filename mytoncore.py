@@ -2903,7 +2903,7 @@ class GpuThread(Thread):
 def Mining(ton):
 	gpuThreads = []
 
-    for gpuId in range(8):
+	for gpuId in range(8):
 		gpuThread = GpuThread(ton, gpuId)
 		gpuThread.start()
 		gpuThreads.append(gpuThread)
