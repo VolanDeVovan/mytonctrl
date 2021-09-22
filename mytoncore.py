@@ -1047,6 +1047,7 @@ class MyTonCore():
 		local.AddLog("start GetPowParams function", "debug")
 		params = dict()
 		cmd = "runmethod  {addr} get_pow_params".format(addr=powAddr)
+		local.AddLog(cmd)
 		result = self.liteClient.Run(cmd)
 		data = self.Result2List(result)
 		params["seed"] = data[0]
